@@ -20,7 +20,7 @@ func ListLogGroup(ctx context.Context, client *cloudwatchlogs.CloudWatchLogs, pr
 	var names []string
 
 	param := cloudwatchlogs.DescribeLogGroupsInput{
-		LogGroupNamePrefix: &prefix,
+		LogGroupNamePrefix: aws.String(prefix),
 	}
 	var getGroupNames func() error
 	getGroupNames = func() error {
@@ -40,4 +40,13 @@ func ListLogGroup(ctx context.Context, client *cloudwatchlogs.CloudWatchLogs, pr
 		return nil, err
 	}
 	return names, nil
+}
+
+func DescLogStreams(ctx context.Context, client *cloudwatchlogs.CloudWatchLogs, groupName string) (*cloudwatchlogs.DescribeLogStreamsOutput, error) {
+	param := cloudwatchlogs.DescribeLogStreamsInput{
+		LogGroupName: aws.String(groupName),
+		Descending:   aws.Bool(true),
+		Limit:        aws.Int64(1),
+	}
+	return client.DescribeLogStreams(&param)
 }

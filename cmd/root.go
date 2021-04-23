@@ -18,15 +18,26 @@ var rootCmd = &cobra.Command{
 	Long:  ``,
 	// PreRunE: //TODO あとでバリデーションを追加する
 	RunE: func(cmd *cobra.Command, args []string) error {
-		c := aws.NewCW(region)
-		ctx := context.Background()
-		names, err := aws.ListLogGroup(ctx, c, "/aws/lambda")
-		if err != nil {
+		if err := do(); err != nil {
 			return err
 		}
-		log.Print(names)
 		return nil
 	},
+}
+
+func do() error {
+	c := aws.NewCW(region)
+	ctx := context.Background()
+	names, err := aws.ListLogGroup(ctx, c, prefix)
+	if err != nil {
+		return err
+	}
+	stream, err := aws.DescLogStreams(ctx, c, names[0])
+	if err != nil {
+		return err
+	}
+	log.Print(stream)
+	return nil
 }
 
 func Execute() error {
@@ -40,7 +51,7 @@ func init() {
 	// cobra.OnInitialize(initConfig)
 	rootCmd.PersistentFlags().StringVar(&profile, "profile", "p", "profile(default is $HOME/.aws/credentials)")
 	rootCmd.PersistentFlags().StringVar(&region, "region", "r", "target log group region")
-	rootCmd.PersistentFlags().StringVar(&region, "region", "r", "log group prefix")
+	rootCmd.PersistentFlags().StringVar(&prefix, "prefix", "x", "log group prefix")
 }
 
 // // initConfig reads in config file and ENV variables if set.
