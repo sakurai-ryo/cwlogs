@@ -3,8 +3,10 @@ package cmd
 import (
 	"context"
 	"cwlogs/aws"
+	"fmt"
 	"log"
 
+	"github.com/c-bata/go-prompt"
 	"github.com/spf13/cobra"
 )
 
@@ -32,12 +34,30 @@ func do() error {
 	if err != nil {
 		return err
 	}
-	stream, err := aws.DescLogStreams(ctx, c, names[0])
+	t := usePrompt(names)
+	stream, err := aws.DescLogStreams(ctx, c, t)
 	if err != nil {
 		return err
 	}
 	log.Print(stream)
 	return nil
+}
+
+func usePrompt(names []string) string {
+	var s []prompt.Suggest
+	for _, n := range names {
+		s = append(s, prompt.Suggest{Text: n})
+	}
+	fmt.Println("Please select logGroup.")
+	t := prompt.Input(">> ", completer(s))
+	fmt.Println("display selected log stream: " + t)
+	return t
+}
+
+func completer(s []prompt.Suggest) prompt.Completer {
+	return func(d prompt.Document) []prompt.Suggest {
+		return prompt.FilterHasPrefix(s, d.GetWordBeforeCursor(), true)
+	}
 }
 
 func Execute() error {
