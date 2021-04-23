@@ -5,6 +5,9 @@ import (
 	"cwlogs/aws"
 	"fmt"
 	"log"
+	"os"
+	"os/exec"
+	"os/signal"
 
 	"github.com/c-bata/go-prompt"
 	"github.com/spf13/cobra"
@@ -35,11 +38,30 @@ func do() error {
 		return err
 	}
 	t := usePrompt(names)
-	stream, err := aws.DescLogStreams(ctx, c, t)
-	if err != nil {
-		return err
+	// fmt.Sprintf("tail %s", t)
+
+	var cmd *exec.Cmd
+	go func() error {
+		cmd = exec.Command("cw", "tail", t, "-f")
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			return err
+		}
+		return nil
+	}()
+	quit := make(chan os.Signal)
+	signal.Notify(quit, os.Interrupt)
+	for {
+		select {
+		case <-quit:
+			log.Print("Ctr+c Clicked")
+			if err := cmd.Process.Kill(); err != nil {
+				return err
+			}
+			return nil
+		}
 	}
-	log.Print(stream)
 	return nil
 }
 
@@ -50,7 +72,7 @@ func usePrompt(names []string) string {
 	}
 	fmt.Println("Please select logGroup.")
 	t := prompt.Input(">> ", completer(s))
-	fmt.Println("display selected log stream: " + t)
+	fmt.Println("Display Logs: ", t)
 	return t
 }
 
