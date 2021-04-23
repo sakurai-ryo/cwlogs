@@ -38,17 +38,16 @@ func do() error {
 		return err
 	}
 	t := usePrompt(names)
-	// fmt.Sprintf("tail %s", t)
 
 	var cmd *exec.Cmd
-	go func() error {
+	var errChan chan error
+	go func() {
 		cmd = exec.Command("cw", "tail", t, "-f")
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
-			return err
+			errChan <- err
 		}
-		return nil
 	}()
 	quit := make(chan os.Signal)
 	signal.Notify(quit, os.Interrupt)
@@ -60,9 +59,10 @@ func do() error {
 				return err
 			}
 			return nil
+		case err := <-errChan:
+			return err
 		}
 	}
-	return nil
 }
 
 func usePrompt(names []string) string {
