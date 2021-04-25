@@ -1,10 +1,11 @@
 package cmd
 
 import (
+	"bufio"
 	"context"
 	"cwlogs/aws"
 	"fmt"
-	"log"
+	"io"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -40,29 +41,15 @@ func do() error {
 	t := usePrompt(names)
 
 	var cmd *exec.Cmd
-	var errChan chan error
-	go func() {
-		cmd = exec.Command("cw", "tail", t, "-f")
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		if err := cmd.Run(); err != nil {
-			errChan <- err
-		}
-	}()
-	quit := make(chan os.Signal)
-	signal.Notify(quit, os.Interrupt)
-	for {
-		select {
-		case <-quit:
-			log.Print("Ctr+c Clicked")
-			if err := cmd.Process.Kill(); err != nil {
-				return err
-			}
-			return nil
-		case err := <-errChan:
-			return err
-		}
+	sigCtx, stop := signal.NotifyContext(ctx, os.Interrupt)
+	defer stop()
+	if err := startCmd(sigCtx, cmd, t); err != nil {
+		return err
 	}
+
+	<-sigCtx.Done()
+	fmt.Print("Interrupted")
+	return nil
 }
 
 func usePrompt(names []string) string {
@@ -80,6 +67,32 @@ func completer(s []prompt.Suggest) prompt.Completer {
 	return func(d prompt.Document) []prompt.Suggest {
 		return prompt.FilterHasPrefix(s, d.GetWordBeforeCursor(), true)
 	}
+}
+
+func cwReader(r io.Reader) {
+	scanner := bufio.NewScanner(r)
+	for scanner.Scan() {
+		line := scanner.Text()
+		fmt.Println(line)
+	}
+}
+
+func startCmd(ctx context.Context, cmd *exec.Cmd, name string) error {
+	cmd = exec.CommandContext(ctx, "cw", "tail", name, "-f")
+	outReader, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	errReader, err := cmd.StderrPipe()
+	if err != nil {
+		return err
+	}
+	cmdReader := io.MultiReader(outReader, errReader)
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	go cwReader(cmdReader)
+	return nil
 }
 
 func Execute() error {

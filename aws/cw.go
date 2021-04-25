@@ -24,7 +24,7 @@ func ListLogGroup(ctx context.Context, client *cloudwatchlogs.CloudWatchLogs, pr
 	}
 	var getGroupNames func() error
 	getGroupNames = func() error {
-		groups, err := client.DescribeLogGroups(&param)
+		groups, err := client.DescribeLogGroupsWithContext(ctx, &param)
 		if err != nil {
 			return err
 		}
@@ -48,5 +48,5 @@ func DescLogStreams(ctx context.Context, client *cloudwatchlogs.CloudWatchLogs, 
 		Descending:   aws.Bool(true),
 		Limit:        aws.Int64(1),
 	}
-	return client.DescribeLogStreams(&param)
+	return client.DescribeLogStreamsWithContext(ctx, &param)
 }
