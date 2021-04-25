@@ -4,8 +4,10 @@ import (
 	"bufio"
 	"context"
 	"cwlogs/aws"
+	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -61,13 +63,25 @@ func do() error {
 	var cmd *exec.Cmd
 	sigCtx, stop := signal.NotifyContext(ctx, os.Interrupt)
 	defer stop()
-	if err := startCmd(sigCtx, cmd, t); err != nil {
+	errChan := make(chan error)
+	if err := startCmd(sigCtx, cmd, t, errChan); err != nil {
 		return err
 	}
 
-	<-sigCtx.Done()
-	fmt.Print("Interrupted")
-	return nil
+	for {
+		select {
+		case <-sigCtx.Done():
+			if ctx.Err() != nil {
+				log.Print("ctxError")
+				return ctx.Err()
+			} else {
+				log.Print("normalError")
+				return err
+			}
+		case err := <-errChan:
+			return err
+		}
+	}
 }
 
 func usePrompt(names []string) string {
@@ -87,8 +101,8 @@ func completer(s []prompt.Suggest) prompt.Completer {
 	}
 }
 
-func startCmd(ctx context.Context, cmd *exec.Cmd, name string) error {
-	cmd = exec.CommandContext(ctx, "cw", "tail", name, "-f")
+func startCmd(ctx context.Context, cmd *exec.Cmd, name string, errChan chan error) error {
+	cmd = exec.CommandContext(ctx, "cw", "tail", "-f", name)
 	outReader, err := cmd.StdoutPipe()
 	if err != nil {
 		return err
@@ -97,11 +111,11 @@ func startCmd(ctx context.Context, cmd *exec.Cmd, name string) error {
 	if err != nil {
 		return err
 	}
-	cmdReader := io.MultiReader(outReader, errReader)
 	if err := cmd.Start(); err != nil {
 		return err
 	}
-	go cwReader(cmdReader)
+	go cwReader(outReader)
+	go cwErrorHandler(errReader, errChan)
 	return nil
 }
 
@@ -113,25 +127,10 @@ func cwReader(r io.Reader) {
 	}
 }
 
-// // initConfig reads in config file and ENV variables if set.
-// func initConfig() {
-// 	if cfgFile != "" {
-// 		// Use config file from the flag.
-// 		viper.SetConfigFile(cfgFile)
-// 	} else {
-// 		// Find home directory.
-// 		home, err := homedir.Dir()
-// 		cobra.CheckErr(err)
-
-// 		// Search config in home directory with name ".cwlogs" (without extension).
-// 		viper.AddConfigPath(home)
-// 		viper.SetConfigName(".cwlogs")
-// 	}
-
-// 	viper.AutomaticEnv() // read in environment variables that match
-
-// 	// If a config file is found, read it in.
-// 	if err := viper.ReadInConfig(); err == nil {
-// 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
-// 	}
-// }
+func cwErrorHandler(e io.ReadCloser, errChan chan error) {
+	defer e.Close()
+	scanner := bufio.NewScanner(e)
+	for scanner.Scan() {
+		errChan <- errors.New(scanner.Text())
+	}
+}
