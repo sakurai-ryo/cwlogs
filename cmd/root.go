@@ -40,9 +40,13 @@ func Execute() error {
 
 func init() {
 	// cobra.OnInitialize(initConfig)
-	rootCmd.PersistentFlags().StringVar(&profile, "profile", "p", "profile(default is $HOME/.aws/credentials)")
-	rootCmd.PersistentFlags().StringVar(&region, "region", "r", "target log group region")
-	rootCmd.PersistentFlags().StringVar(&prefix, "prefix", "x", "log group prefix")
+	pf := rootCmd.PersistentFlags()
+	pf.StringVar(&profile, "profile", "p", "profile(default is $HOME/.aws/credentials)")
+	pf.StringVar(&region, "region", "r", "target log group region")
+	pf.StringVar(&prefix, "prefix", "x", "log group prefix")
+	cobra.MarkFlagRequired(pf, "profile")
+	cobra.MarkFlagRequired(pf, "region")
+	cobra.MarkFlagRequired(pf, "prefix")
 }
 
 func do() error {
