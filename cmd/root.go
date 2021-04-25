@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -72,10 +71,8 @@ func do() error {
 		select {
 		case <-sigCtx.Done():
 			if ctx.Err() != nil {
-				log.Print("ctxError")
 				return ctx.Err()
 			} else {
-				log.Print("normalError")
 				return err
 			}
 		case err := <-errChan:
