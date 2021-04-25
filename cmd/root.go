@@ -31,6 +31,20 @@ var rootCmd = &cobra.Command{
 	},
 }
 
+func Execute() error {
+	if err := rootCmd.Execute(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func init() {
+	// cobra.OnInitialize(initConfig)
+	rootCmd.PersistentFlags().StringVar(&profile, "profile", "p", "profile(default is $HOME/.aws/credentials)")
+	rootCmd.PersistentFlags().StringVar(&region, "region", "r", "target log group region")
+	rootCmd.PersistentFlags().StringVar(&prefix, "prefix", "x", "log group prefix")
+}
+
 func do() error {
 	c := aws.NewCW(region)
 	ctx := context.Background()
@@ -93,20 +107,6 @@ func startCmd(ctx context.Context, cmd *exec.Cmd, name string) error {
 	}
 	go cwReader(cmdReader)
 	return nil
-}
-
-func Execute() error {
-	if err := rootCmd.Execute(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func init() {
-	// cobra.OnInitialize(initConfig)
-	rootCmd.PersistentFlags().StringVar(&profile, "profile", "p", "profile(default is $HOME/.aws/credentials)")
-	rootCmd.PersistentFlags().StringVar(&region, "region", "r", "target log group region")
-	rootCmd.PersistentFlags().StringVar(&prefix, "prefix", "x", "log group prefix")
 }
 
 // // initConfig reads in config file and ENV variables if set.
