@@ -83,14 +83,6 @@ func completer(s []prompt.Suggest) prompt.Completer {
 	}
 }
 
-func cwReader(r io.Reader) {
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		line := scanner.Text()
-		fmt.Println(line)
-	}
-}
-
 func startCmd(ctx context.Context, cmd *exec.Cmd, name string) error {
 	cmd = exec.CommandContext(ctx, "cw", "tail", name, "-f")
 	outReader, err := cmd.StdoutPipe()
@@ -107,6 +99,14 @@ func startCmd(ctx context.Context, cmd *exec.Cmd, name string) error {
 	}
 	go cwReader(cmdReader)
 	return nil
+}
+
+func cwReader(r io.Reader) {
+	scanner := bufio.NewScanner(r)
+	for scanner.Scan() {
+		line := scanner.Text()
+		fmt.Println(line)
+	}
 }
 
 // // initConfig reads in config file and ENV variables if set.
