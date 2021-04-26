@@ -7,5 +7,5 @@ cw wrapper tool.
 $ bash init.sh
 
 # example
-$ cwlogs --profile __ --region __ --prefix
+$ cwlogs --profile __ --region __ --prefix __
 ```
