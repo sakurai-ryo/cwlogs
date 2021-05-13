@@ -3,6 +3,12 @@ set -eu
 
 cd $(dirname $0)
 
+FILE="/usr/local/bin/cwlogs"
+
+if [ -e ${FILE} ]; then
+    rm ${FILE}
+fi
+
 go build
 
 bin_name="cwlogs"
@@ -12,5 +18,5 @@ if [ ! -e "$(pwd)/${bin_name}" ]; then
     exit 1
 fi
 
-ln -s $(pwd)/${bin_name} /usr/local/bin/cwlogs
-chmod 755 /usr/local/bin/cwlogs
+ln -s $(pwd)/${bin_name} ${FILE}
+chmod 755 ${FILE}
